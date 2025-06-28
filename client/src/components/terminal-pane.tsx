@@ -23,8 +23,14 @@ export default function TerminalPane({ projectId, lastMessage, isConnected }: Te
     const script = document.createElement('script');
     script.src = 'https://unpkg.com/xterm@5.3.0/lib/xterm.js';
     script.onload = () => {
-      const Terminal = (window as any).Terminal;
-      const terminal = new Terminal({
+      // Wait for xterm to be fully loaded
+      setTimeout(() => {
+        const Terminal = (window as any).Terminal;
+        if (!Terminal) {
+          console.error('xterm.js not loaded properly');
+          return;
+        }
+        const terminal = new Terminal({
         theme: {
           background: '#000000',
           foreground: '#00FF00',

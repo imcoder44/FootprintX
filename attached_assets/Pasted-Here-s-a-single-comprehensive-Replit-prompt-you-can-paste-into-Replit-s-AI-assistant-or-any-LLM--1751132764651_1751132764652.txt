@@ -1,0 +1,136 @@
+Here’s a single, comprehensive “Replit prompt” you can paste into Replit’s AI assistant (or any LLM-powered code generator) to spin up your Java footprinting web‑app with a hacker‑terminal UI, step by step:
+
+---
+
+**📋 Replit AI Prompt**
+
+```
+You are a senior full‑stack engineer. I want you to generate a complete, runnable Java-based web application that performs “footprinting” (OSINT) in real time, exposing a hacker‑terminal style UI in the browser. Deliver everything from initial setup instructions through deployment steps on GitHub. Follow these requirements:
+
+1. Project Overview  
+   - **Name:** Footprint‑X  
+   - **Description:** Given a phone number or name, Footprint‑X performs OSINT lookup (public phone‑info APIs, email‑finder APIs, social‑media search, geo‑IP, etc.) and displays live results in a terminal-like UI.  
+
+2. Tech Stack  
+   - **Backend:** Java 17, Spring Boot, Spring WebFlux (for real‑time streaming), Maven  
+   - **APIs & Services:**  
+     - Phone info: Numverify API (or Twilio Lookup)  
+     - Email & person lookup: Clearbit Enrichment API  
+     - Geolocation: ipstack.com or ip-api.com  
+     - Social profiles: FullContact API (if available)  
+   - **Frontend:** HTML5, CSS3 (Flexbox), vanilla JavaScript, xterm.js (for terminal emulator)  
+   - **Real‑Time:** Server‑Sent Events (SSE) or WebSockets via Spring WebFlux  
+   - **Persistence (optional):** H2 in‑memory database for caching queries  
+   - **Security:** Spring Security (HTTP basic), secure API key storage (application.yml, .env)  
+
+3. Folder & Module Structure  
+```
+
+footprint-x/
+├── src/
+│   ├── main/
+│   │   ├── java/com/example/footprintx/
+│   │   │   ├── controller/      ← REST controllers and SSE/WebSocket endpoints
+│   │   │   ├── service/         ← API‑calling services, parsing logic
+│   │   │   ├── model/           ← DTOs for API responses & SSE events
+│   │   │   └── config/          ← WebFlux, CORS, Security configs
+│   │   └── resources/
+│   │       ├── application.yml  ← API keys (loaded from .env)
+│   │       └── static/          ← index.html, CSS, JS, terminal assets
+└── pom.xml                      ← Dependencies & build
+
+````
+
+4. Step‑by‑Step Setup  
+1. **Create Replit Project**  
+   - Language: Java  
+   - Build tool: Maven  
+   - Enable “Always On” if you plan to keep the websocket server live.  
+2. **Dependencies (pom.xml)**  
+   ```xml
+   <dependencies>
+     <!-- Spring Boot & WebFlux -->
+     <dependency>org.springframework.boot:spring-boot-starter-webflux</dependency>
+     <!-- Spring Security -->
+     <dependency>org.springframework.boot:spring-boot-starter-security</dependency>
+     <!-- H2 Database (optional cache) -->
+     <dependency>com.h2database:h2</dependency>
+     <!-- Reactor Netty (for SSE/WebSocket) -->
+     <dependency>io.projectreactor.netty:reactor-netty</dependency>
+     <!-- Jackson JSON -->
+     <dependency>com.fasterxml.jackson.core:jackson-databind</dependency>
+   </dependencies>
+   ```
+3. **Application Configuration**  
+   - Create an `.env` at project root with your API keys:  
+     ```
+     NUMVERIFY_KEY=YOUR_NUMVERIFY_KEY
+     CLEARBIT_KEY=YOUR_CLEARBIT_KEY
+     IPSTACK_KEY=YOUR_IPSTACK_KEY
+     ```
+   - In `application.yml`, load them as `spring.config.import: "optional:classpath:.env"` (or use Spring’s `@Value("${NUMVERIFY_KEY}")`).  
+4. **Backend Implementation**  
+   - **Service Layer:** For each external API, build a non‑blocking WebClient bean to fetch and parse responses into DTOs.  
+   - **Controller Layer:**  
+     - Expose one endpoint `POST /api/lookup` that accepts `{ "query": "phoneOrName" }`.  
+     - On receipt, kick off parallel Mono/Flux calls to each service.  
+     - Stream results back via SSE at `/api/stream/{sessionId}` or via WebSocket.  
+   - **Config:**  
+     - Enable CORS for your Replit domain.  
+     - Configure Spring Security to require basic login (username: “admin”, password: “admin123”) to protect your API keys.  
+5. **Frontend Implementation**  
+   - **index.html:**  
+     ```html
+     <!DOCTYPE html>
+     <html>
+     <head>
+       <meta charset="UTF-8" />
+       <title>Footprint‑X Terminal</title>
+       <link rel="stylesheet" href="styles.css">
+     </head>
+     <body>
+       <div id="terminal"></div>
+       <script src="https://unpkg.com/xterm/lib/xterm.js"></script>
+       <script src="app.js"></script>
+     </body>
+     </html>
+     ```  
+   - **styles.css:**  
+     ```css
+     html, body { margin: 0; height: 100%; background: #000; color: #0f0; font-family: monospace; }
+     #terminal { width: 100%; height: 100%; }
+     ```  
+   - **app.js:**  
+     ```js
+     const term = new Terminal({ cursorBlink: true });
+     term.open(document.getElementById('terminal'));
+     term.write('Welcome to Footprint‑X\r\n> ');
+     document.addEventListener('keydown', e => {
+       if (e.key === "Enter") {
+         const query = inputBuffer;
+         term.write('\r\nSearching for ' + query + '...\r\n');
+         const evtSource = new EventSource(`/api/stream/${sessionId}`);
+         evtSource.onmessage = e => {
+           term.write(e.data + '\r\n');
+         };
+       } else {
+         // capture inputBuffer...
+       }
+     });
+     ```  
+6. **Running & Testing**  
+   - Run `mvn spring-boot:run` in the Replit console.  
+   - Open the Replit webview; you should see a green‑on‑black terminal.  
+   - Type a phone number or name, hit Enter, and watch live OSINT results stream.  
+7. **Deployment to GitHub**  
+   - Initialize a Git repo: `git init && git add . && git commit -m "Initial commit"`.  
+   - Create a GitHub repo named `footprint-x` and push:  
+     ```
+     git remote add origin https://github.com/<your‑username>/footprint-x.git  
+     git branch -M main  
+     git push -u origin main
+     ```
+   - (Optional) Enable GitHub Actions with a simple Maven CI workflow to build & test on each push.  
+
+Please ensure you **never** commit your `.env` file with real API keys—use a GitHub secret or Replit’s secret store. That’s it—this prompt should instruct Replit’s AI to scaffold, code, and deploy your live Java footprinting terminal app in one go.  
+````
