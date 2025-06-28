@@ -6,8 +6,8 @@ const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
-// Basic auth middleware for OSINT endpoints
-app.use('/api', (req: Request, res: Response, next: NextFunction) => {
+// Basic auth middleware only for sensitive OSINT API endpoints
+app.use('/api/lookup', (req: Request, res: Response, next: NextFunction) => {
   const auth = req.headers.authorization;
   
   if (!auth || !auth.startsWith('Basic ')) {
@@ -22,6 +22,11 @@ app.use('/api', (req: Request, res: Response, next: NextFunction) => {
     return res.status(401).json({ error: 'Invalid credentials' });
   }
   
+  next();
+});
+
+app.use('/api/stream/*', (req: Request, res: Response, next: NextFunction) => {
+  // Allow SSE streams without auth for better UX
   next();
 });
 

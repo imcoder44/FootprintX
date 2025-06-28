@@ -99,6 +99,7 @@ The application follows a modern full-stack architecture with clear separation b
 
 Changelog:
 - June 28, 2025. Initial setup
+- June 28, 2025. Built complete Footprint-X OSINT terminal application with real-time reconnaissance capabilities, hacker terminal UI, and authentication system
 
 ## User Preferences
 
