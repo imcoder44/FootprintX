@@ -1,0 +1,52 @@
+You are Replit AI, a code‑generation assistant. I want to build a browser‑based, polyglot IDE with a “hacker’s terminal” look and feel. The frontend must feel like a retro command‑center and include:
+- A full‑screen, split‑pane layout: 70% code editor on the left, 30% terminal on the right.
+- An embedded Monaco editor in dark theme, customized to use Fira Code or Hack font, neon‑green syntax accents, and a glowing cursor.
+- An xterm.js‑powered terminal pane with pure black background, neon‑green text, ANSI‑color support, blinking block cursor, typewriter effect for initial welcome text, up/down arrow history, auto‑scroll, and optional “glitch” animation on load.
+- A minimal top bar showing project name in neon green and a “Run” button styled like a console prompt (e.g. “>_ Run”).
+
+The backend must be written in Java (Spring Boot or similar) and orchestrate sandboxed containers for seven stacks: Java, Python, JavaScript, React, C/C++, MySQL, and HTML/CSS. Requirements:
+1. At startup, load a `/config/languages/*.yaml` registry describing for each stack:
+   • language ID (e.g. “java”, “python”)
+   • Docker base image (e.g. `openjdk:17-jdk`, `python:3.11`, `node:20`, `gcc:12`, `mysql:8`, `httpd:2.4`)
+   • LSP binary name (e.g. `eclipse-jdt-ls`, `pylsp`, `typescript-language-server`, `clangd`, `sql-language-server`, `html-languageserver`)
+   • build command (e.g. `mvn compile`, `pip install -r requirements.txt`, `npm install`, `gcc -o app main.cpp`)
+   • run command (e.g. `mvn exec:java`, `python main.py`, `node index.js`, `./app`, `mysqld`, `serve -s .`)
+
+2. Expose REST endpoints:
+   • `POST /api/projects` to create a new project from a stack template (template files for HelloWorld in each language).
+   • `GET /api/projects/{id}/files` and `POST /api/projects/{id}/files` to read/write code files.
+   • `POST /api/projects/{id}/run` to trigger build + run: spin up a Docker container with resource limits and no Internet by default, exec build and/or run commands, capture stdout/stderr, stream back via WebSocket.
+   • `POST /api/projects/{id}/lsp` to start the configured LSP server in a container/process, proxied over WebSocket to the frontend.
+
+3. Implement security and resource controls:
+   • Use Docker (or Kubernetes) with cgroup limits on CPU and RAM.
+   • Enforce timeouts (e.g. 30 s) to kill infinite loops.
+   • Mount only the project directory as writeable; all else read‑only.
+   • Disable outbound network unless explicitly enabled for web‑preview.
+
+4. Persistence:
+   • Store project metadata in PostgreSQL.
+   • Store code snapshots in JSONB or object storage.
+   • Autosave on file edit via debounce (e.g. 1 s).
+
+5. Frontend wiring:
+   • Use React for UI.
+   • On project load: fetch file tree, initialize Monaco with language mode, request LSP via WebSocket.
+   • On “Run” click: call `/run`, display streaming logs in terminal pane.
+   • Provide draggable resizer between editor and terminal.
+
+6. Developer experience:
+   • Project templates for each stack: Maven archetype for Java; virtualenv + requirements.txt for Python; package.json for JS/React; Makefile or simple `main.cpp` for C++; index.html + styles.css for HTML/CSS; SQL script for MySQL schema.
+   • Top‑level commands: “Build”, “Run”, “Stop”.
+
+Write me:
+- The Java backend project structure (packages, main classes, key services/controllers).
+- Sample YAML descriptors for all seven stacks.
+- Core Spring Boot code for loading the registry, managing containers, streaming output.
+- The React component tree: EditorPane, TerminalPane, TopBar, Resizer.
+- Sample CSS (or Tailwind config) for the hacker‑terminal theme.
+- How to configure Monaco theme overrides and xterm.js theme.
+- Example of the WebSocket protocol for LSP and for build/run streaming.
+- A checklist of next steps to go from MVP “Hello World” to a fully working polyglot IDE.
+
+Use code snippets, clear folder structure diagrams, and inline comments to explain each part.
