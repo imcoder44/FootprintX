@@ -1,0 +1,53 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: footprint-x
+  
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+  
+  datasource:
+    url: jdbc:h2:mem:footprintdb
+    driver-class-name: org.h2.Driver
+    username: sa
+    password: 
+  
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: false
+    database-platform: org.hibernate.dialect.H2Dialect
+
+  security:
+    user:
+      name: admin
+      password: admin123
+      roles: USER
+
+# API Keys - will be overridden by environment variables
+api:
+  numverify:
+    key: ${NUMVERIFY_KEY:demo_key}
+    url: http://apilayer.net/api/validate
+  
+  clearbit:
+    key: ${CLEARBIT_KEY:demo_key}
+    url: https://person.clearbit.com/v2/combined/find
+  
+  ipstack:
+    key: ${IPSTACK_KEY:demo_key}
+    url: http://api.ipstack.com
+  
+  fullcontact:
+    key: ${FULLCONTACT_KEY:demo_key}
+    url: https://api.fullcontact.com/v3/person.enrich
+
+logging:
+  level:
+    com.example.footprintx: DEBUG
+    reactor.netty: INFO
+    org.springframework.web: INFO
