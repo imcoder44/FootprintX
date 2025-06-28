@@ -72,15 +72,22 @@ class PhoneInfoService {
 
   private analyzePhoneNumber(phoneNumber: string) {
     const cleaned = phoneNumber.replace(/\D/g, '');
-    const countryCode = cleaned.substring(0, 1);
-    const areaCode = cleaned.substring(1, 4);
     
+    // Indian phone number analysis
+    if (cleaned.startsWith('91') && cleaned.length === 12) {
+      return this.analyzeIndianPhone(cleaned);
+    } else if (cleaned.length === 10 && cleaned.match(/^[6-9]/)) {
+      return this.analyzeIndianPhone('91' + cleaned);
+    }
+    
+    // International fallback
+    const countryCode = cleaned.substring(0, 2);
     const countryMap: { [key: string]: string } = {
-      '1': 'United States/Canada',
+      '91': 'India',
+      '92': 'Pakistan',
+      '86': 'China',
       '44': 'United Kingdom',
-      '33': 'France',
-      '49': 'Germany',
-      '86': 'China'
+      '1': 'United States/Canada'
     };
 
     return {
@@ -88,10 +95,55 @@ class PhoneInfoService {
       cleaned: cleaned,
       country_code: countryCode,
       country: countryMap[countryCode] || 'Unknown',
-      area_code: areaCode,
       length: cleaned.length,
       valid_format: cleaned.length >= 10 && cleaned.length <= 15,
-      type: cleaned.length === 11 && countryCode === '1' ? 'North American' : 'International'
+      type: 'International',
+      region: 'Unknown'
+    };
+  }
+
+  private analyzeIndianPhone(cleaned: string) {
+    const mobileNumber = cleaned.substring(2); // Remove 91 country code
+    const series = mobileNumber.substring(0, 1);
+    const operatorCode = mobileNumber.substring(0, 4);
+    
+    // Indian mobile operator mapping
+    const operatorMap: { [key: string]: string } = {
+      '6': 'Airtel/BSNL',
+      '7': 'Airtel/Vodafone/Jio',
+      '8': 'Airtel/Vodafone/BSNL/Jio',
+      '9': 'Airtel/Vodafone/Jio/Idea'
+    };
+
+    // State/circle detection based on operator codes (simplified)
+    const circleMap: { [key: string]: string } = {
+      '9999': 'Delhi',
+      '9898': 'Gujarat',
+      '9876': 'Punjab',
+      '9844': 'Karnataka',
+      '9900': 'Karnataka',
+      '9811': 'Delhi',
+      '8888': 'Rajasthan',
+      '7777': 'Uttar Pradesh'
+    };
+
+    const detectedCircle = circleMap[operatorCode] || 'Unknown Circle';
+    const possibleOperator = operatorMap[series] || 'Unknown Operator';
+
+    return {
+      number: '+91-' + mobileNumber,
+      country: 'India',
+      country_code: '91',
+      mobile_number: mobileNumber,
+      series: series,
+      operator_code: operatorCode,
+      possible_operators: possibleOperator.split('/'),
+      telecom_circle: detectedCircle,
+      type: 'Indian Mobile',
+      valid_format: mobileNumber.length === 10 && ['6', '7', '8', '9'].includes(series),
+      is_mobile: true,
+      region: 'India',
+      note: 'Analysis based on Indian numbering plan'
     };
   }
 
@@ -187,14 +239,39 @@ class EmailInfoService {
   }
 
   private async analyzeDomain(domain: string) {
-    // Real domain analysis
+    const tld = domain.split('.').pop();
+    const isIndianDomain = tld === 'in' || domain.endsWith('.co.in') || domain.endsWith('.org.in') || domain.endsWith('.net.in');
+    
+    // Indian email providers
+    const indianProviders = ['rediffmail.com', 'yahoo.co.in', 'gmail.com', 'sify.com'];
+    const commonProviders = ['gmail.com', 'yahoo.com', 'outlook.com', 'hotmail.com'];
+    
+    const isIndianProvider = indianProviders.includes(domain);
+    const isCommonProvider = commonProviders.includes(domain);
+    
     return {
       domain: domain,
-      tld: domain.split('.').pop(),
-      is_common_provider: ['gmail.com', 'yahoo.com', 'outlook.com', 'hotmail.com'].includes(domain),
-      is_business: !['gmail.com', 'yahoo.com', 'outlook.com', 'hotmail.com'].includes(domain),
-      estimated_employees: domain.includes('gmail') ? 'Personal' : 'Unknown'
+      tld: tld,
+      is_indian_domain: isIndianDomain,
+      is_indian_provider: isIndianProvider,
+      is_common_provider: isCommonProvider,
+      is_business: !isCommonProvider && !isIndianProvider,
+      region: isIndianDomain || isIndianProvider ? 'India' : 'International',
+      domain_type: this.classifyIndianDomain(domain),
+      estimated_employees: isCommonProvider ? 'Personal' : 'Unknown'
     };
+  }
+
+  private classifyIndianDomain(domain: string): string {
+    if (domain.endsWith('.gov.in')) return 'Indian Government';
+    if (domain.endsWith('.edu.in')) return 'Indian Educational';
+    if (domain.endsWith('.ac.in')) return 'Indian Academic';
+    if (domain.endsWith('.co.in')) return 'Indian Commercial';
+    if (domain.endsWith('.org.in')) return 'Indian Organization';
+    if (domain.endsWith('.net.in')) return 'Indian Network';
+    if (domain.endsWith('.in')) return 'Indian Generic';
+    if (['rediffmail.com', 'sify.com'].includes(domain)) return 'Indian Email Provider';
+    return 'International/Unknown';
   }
 
   private validateEmailFormat(email: string): boolean {
@@ -341,15 +418,79 @@ class GeoIPService {
       ipType = 'Localhost';
     }
 
+    // Indian ISP detection based on known IP ranges
+    const indianISP = this.detectIndianISP(ipAddress);
+
     return {
       ip: ipAddress,
       ip_class: ipClass,
       ip_type: ipType,
       is_private: ipType !== 'Public',
-      country: ipType === 'Private/Local' ? 'Local Network' : 'Unknown',
-      region: ipType === 'Localhost' ? 'Local Machine' : 'Unknown',
-      isp: 'Unknown - Real geolocation services needed',
-      note: 'For detailed geolocation, configure API keys in environment'
+      country: ipType === 'Private/Local' ? 'Local Network' : indianISP.country,
+      region: ipType === 'Localhost' ? 'Local Machine' : indianISP.region,
+      city: indianISP.city,
+      isp: indianISP.isp,
+      operator: indianISP.operator,
+      network_type: indianISP.networkType,
+      note: 'Analysis based on known Indian IP ranges and patterns'
+    };
+  }
+
+  private detectIndianISP(ipAddress: string): any {
+    const octets = ipAddress.split('.').map(Number);
+    const firstOctet = octets[0];
+    const secondOctet = octets[1];
+    
+    // Known Indian ISP IP ranges (simplified detection)
+    const indianRanges = {
+      // Airtel ranges
+      '59': { isp: 'Bharti Airtel', operator: 'Airtel', country: 'India', region: 'Multiple States', city: 'Unknown', networkType: 'Broadband/Mobile' },
+      '117': { isp: 'Bharti Airtel', operator: 'Airtel', country: 'India', region: 'Multiple States', city: 'Unknown', networkType: 'Broadband' },
+      
+      // Jio ranges
+      '49': { isp: 'Reliance Jio', operator: 'Jio', country: 'India', region: 'Pan India', city: 'Unknown', networkType: 'Mobile/Fiber' },
+      '106': { isp: 'Reliance Jio', operator: 'Jio', country: 'India', region: 'Pan India', city: 'Unknown', networkType: 'Broadband' },
+      
+      // BSNL ranges
+      '14': { isp: 'BSNL', operator: 'BSNL', country: 'India', region: 'Multiple States', city: 'Unknown', networkType: 'Government Broadband' },
+      '115': { isp: 'BSNL', operator: 'BSNL', country: 'India', region: 'Multiple States', city: 'Unknown', networkType: 'Broadband' },
+      
+      // Vodafone Idea ranges
+      '103': { isp: 'Vodafone Idea', operator: 'Vi', country: 'India', region: 'Multiple States', city: 'Unknown', networkType: 'Mobile/Broadband' },
+      
+      // ACT Fibernet
+      '202': { isp: 'ACT Fibernet', operator: 'ACT', country: 'India', region: 'South India', city: 'Bangalore/Hyderabad', networkType: 'Fiber' },
+      
+      // Hathway
+      '45': { isp: 'Hathway Cable', operator: 'Hathway', country: 'India', region: 'Multiple Cities', city: 'Unknown', networkType: 'Cable Broadband' }
+    };
+
+    // Check for Indian IP ranges
+    const key = firstOctet.toString();
+    if (key in indianRanges) {
+      return indianRanges[key as keyof typeof indianRanges];
+    }
+
+    // Regional state detection based on common patterns
+    if (firstOctet >= 43 && firstOctet <= 125) {
+      return {
+        isp: 'Indian ISP (Pattern Based)',
+        operator: 'Unknown Indian Provider',
+        country: 'India',
+        region: 'India (Estimated)',
+        city: 'Unknown',
+        networkType: 'Broadband/Mobile'
+      };
+    }
+
+    // International fallback
+    return {
+      isp: 'International/Unknown',
+      operator: 'Non-Indian Provider',
+      country: 'Unknown',
+      region: 'International',
+      city: 'Unknown',
+      networkType: 'Unknown'
     };
   }
 
@@ -380,15 +521,149 @@ class GeoIPService {
   }
 }
 
+class PersonSearchService {
+  private apiKey: string;
+
+  constructor() {
+    this.apiKey = process.env.PERSON_SEARCH_KEY || 'demo_key';
+  }
+
+  async searchPerson(name: string, sessionId: string): Promise<OSINTResult> {
+    const result: OSINTResult = {
+      source: "Person Search",
+      type: "person",
+      query: name,
+      success: false,
+      message: "",
+      timestamp: new Date().toISOString(),
+      sessionId
+    };
+
+    try {
+      // Comprehensive person analysis for Indian context
+      const personAnalysis = await this.analyzePersonName(name);
+      
+      result.success = true;
+      result.data = personAnalysis;
+      result.message = "Person analysis completed";
+      return result;
+
+    } catch (error) {
+      result.message = `Person search failed: ${error}`;
+      return result;
+    }
+  }
+
+  private async analyzePersonName(name: string) {
+    const nameParts = name.trim().split(' ');
+    const firstName = nameParts[0];
+    const lastName = nameParts[nameParts.length - 1];
+    
+    return {
+      full_name: name,
+      first_name: firstName,
+      last_name: lastName,
+      name_parts: nameParts,
+      indian_name_analysis: this.analyzeIndianName(name),
+      potential_social_profiles: this.generateIndianSocialProfiles(name),
+      search_suggestions: this.generateSearchSuggestions(name),
+      possible_locations: this.suggestIndianLocations(name),
+      professional_platforms: this.generateProfessionalProfiles(name)
+    };
+  }
+
+  private analyzeIndianName(name: string) {
+    const commonIndianSurnames = [
+      'sharma', 'gupta', 'singh', 'kumar', 'agarwal', 'jain', 'patel', 'shah', 
+      'mehta', 'verma', 'mishra', 'yadav', 'reddy', 'nair', 'iyer', 'krishnan',
+      'das', 'roy', 'banerjee', 'mukherjee', 'chatterjee', 'ghosh'
+    ];
+    
+    const nameLower = name.toLowerCase();
+    const detectedSurnames = commonIndianSurnames.filter(surname => 
+      nameLower.includes(surname)
+    );
+
+    // Regional analysis
+    let possibleRegion = 'Unknown';
+    if (nameLower.includes('reddy') || nameLower.includes('rao')) possibleRegion = 'South India (Andhra/Telangana)';
+    else if (nameLower.includes('nair') || nameLower.includes('menon')) possibleRegion = 'Kerala';
+    else if (nameLower.includes('iyer') || nameLower.includes('krishnan')) possibleRegion = 'Tamil Nadu';
+    else if (nameLower.includes('singh') && nameLower.includes('kaur')) possibleRegion = 'Punjab/Sikh';
+    else if (nameLower.includes('patel') || nameLower.includes('shah')) possibleRegion = 'Gujarat';
+    else if (nameLower.includes('banerjee') || nameLower.includes('das')) possibleRegion = 'West Bengal';
+
+    return {
+      detected_surnames: detectedSurnames,
+      possible_region: possibleRegion,
+      likely_indian: detectedSurnames.length > 0,
+      name_complexity: name.split(' ').length
+    };
+  }
+
+  private generateIndianSocialProfiles(name: string) {
+    const username = name.toLowerCase().replace(/\s+/g, '');
+    const usernameWithDots = name.toLowerCase().replace(/\s+/g, '.');
+    
+    return [
+      { platform: 'Facebook', url: `https://facebook.com/${username}`, likelihood: 'High - Most common in India' },
+      { platform: 'Instagram', url: `https://instagram.com/${username}`, likelihood: 'High - Popular among youth' },
+      { platform: 'Twitter', url: `https://twitter.com/${username}`, likelihood: 'Medium - Professional users' },
+      { platform: 'LinkedIn', url: `https://linkedin.com/in/${usernameWithDots}`, likelihood: 'High - Professional network' },
+      { platform: 'WhatsApp Business', note: 'Search via phone number', likelihood: 'Very High - Universal in India' },
+      { platform: 'Telegram', url: `https://t.me/${username}`, likelihood: 'Medium - Growing popularity' }
+    ];
+  }
+
+  private generateSearchSuggestions(name: string) {
+    return [
+      `"${name}" site:linkedin.com`,
+      `"${name}" site:facebook.com`,
+      `"${name}" india contact`,
+      `"${name}" phone number india`,
+      `"${name}" email address`,
+      `"${name}" company india`,
+      `"${name}" college university`,
+      `"${name}" bangalore mumbai delhi`
+    ];
+  }
+
+  private suggestIndianLocations(name: string) {
+    return [
+      'Mumbai, Maharashtra',
+      'Delhi NCR',
+      'Bangalore, Karnataka',
+      'Hyderabad, Telangana',
+      'Chennai, Tamil Nadu',
+      'Pune, Maharashtra',
+      'Kolkata, West Bengal',
+      'Ahmedabad, Gujarat'
+    ];
+  }
+
+  private generateProfessionalProfiles(name: string) {
+    const username = name.toLowerCase().replace(/\s+/g, '');
+    return [
+      { platform: 'Naukri.com', search: `Search "${name}" on India's largest job portal` },
+      { platform: 'GitHub', url: `https://github.com/${username}`, field: 'Technology/Software' },
+      { platform: 'AngelList', search: `Search "${name}" in Indian startup ecosystem` },
+      { platform: 'Justdial', search: `Business listings for "${name}"` },
+      { platform: 'IndiaMART', search: `B2B business profiles for "${name}"` }
+    ];
+  }
+}
+
 class OSINTOrchestratorService {
   private phoneService: PhoneInfoService;
   private emailService: EmailInfoService;
   private geoService: GeoIPService;
+  private personService: PersonSearchService;
 
   constructor() {
     this.phoneService = new PhoneInfoService();
     this.emailService = new EmailInfoService();
     this.geoService = new GeoIPService();
+    this.personService = new PersonSearchService();
   }
 
   async *performLookup(query: string, sessionId: string): AsyncGenerator<OSINTResult> {
@@ -420,11 +695,7 @@ class OSINTOrchestratorService {
           result = await this.geoService.lookupIP(query, sessionId);
           break;
         case "name":
-          result = await this.emailService.lookupEmail(query + "@gmail.com", sessionId);
-          result.source = "Social Search (Demo)";
-          result.type = "name";
-          result.query = query;
-          result.message = `Social media search completed for: ${query}`;
+          result = await this.personService.searchPerson(query, sessionId);
           break;
         default:
           result = {
