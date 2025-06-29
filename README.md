@@ -27,14 +27,11 @@ Footprint-X is a browser-based OSINT (Open Source Intelligence) terminal designe
 
 ### Startup Screen
 
-![Footprint-X Startup](https://raw.githubusercontent.com/your-username/FootprintX/main/screenshots/startup.png)
+![Screenshot 2025-06-29 141549](https://github.com/user-attachments/assets/afd9faa1-b9a5-4896-8e70-4837eb0d1adb)
 
 ### Example OSINT Lookup
 
-![Footprint-X OSINT Lookup](https://raw.githubusercontent.com/your-username/FootprintX/main/screenshots/lookup.png)
-
 ![Screenshot 2025-06-29 141713](https://github.com/user-attachments/assets/496adb17-161e-4c55-afa6-eed60182680e)
-![Screenshot 2025-06-29 141549](https://github.com/user-attachments/assets/afd9faa1-b9a5-4896-8e70-4837eb0d1adb)
 
 ---
 ## ⚙️ Installation
