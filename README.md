@@ -47,6 +47,11 @@ npm install
 ## 🏁 Running the app
 
 ```bash
+# Backend
+mvn spring-boot:run
+
+# Frontend
+npm install
 npm run dev
 ```
 
