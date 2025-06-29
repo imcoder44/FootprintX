@@ -1,6 +1,15 @@
 node_modules
 dist
 .DS_Store
+Thumbs.db
 server/public
 vite.config.ts.*
 *.tar.gz
+
+# Java
+target/
+*.iml
+
+# IDE
+.idea/
+*.log
