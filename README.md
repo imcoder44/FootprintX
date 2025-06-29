@@ -94,24 +94,6 @@ FootprintX/
 
 ---
 
-## 📸 How to update screenshots
-
-1. Create a `screenshots/` folder in your repo root.
-2. Add your images:
-
-   * `startup.png`
-   * `lookup.png`
-3. Commit:
-
-   ```bash
-   git add screenshots/
-   git commit -m "Add screenshots for README"
-   git push
-   ```
-4. Update the image URLs in this README to point to your GitHub raw links.
-
----
-
 ## 🤝 Contributing
 
 Feel free to fork and submit pull requests to add more reconnaissance modules or improve the terminal interface!
